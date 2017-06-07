@@ -20,7 +20,8 @@ from astropy import units as u
 from astropy.units import sday  # sidereal day
 
 # Sunpy modules
-from sunpy.map import GenericMap, MapMeta
+from sunpy.map import GenericMap
+from sunpy.util.metadata import MetaDict
 from sunpy.visualization.imageanimator import ImageAnimator
 from sunpy.lightcurve import LightCurve
 from sunpycube.spectra.spectrum import Spectrum
@@ -247,7 +248,7 @@ class Cube(astropy.nddata.NDDataArray):
             else:
                 maparray = maparray[cu.pixelize(snd_dim, self.axes_wcs, 1)]
 
-        mapheader = MapMeta(self.meta)
+        mapheader = MetaDict(self.meta)
         gmap = GenericMap(data=maparray, header=mapheader, *args, **kwargs)
         return gmap
 
