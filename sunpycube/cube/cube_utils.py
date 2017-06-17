@@ -44,8 +44,7 @@ def orient(array, wcs, *extra_arrs):
         raise ValueError("WCS must have the same dimensions as the array")
 
     wcs.oriented = True
-    result_extras = [arr for arr in extra_arrs]
-    return (array, wcs) + tuple(result_extras)
+    return (array, wcs) + tuple(extra_arrs)
 
 
 def select_order(axtypes):
