@@ -43,20 +43,8 @@ def orient(array, wcs, *extra_arrs):
             or (wcs.wcs.naxis == 4 and array.ndim == 3 and wcs.was_augmented)):
         raise ValueError("WCS must have the same dimensions as the array")
 
-    axtypes = list(wcs.wcs.ctype)
-
-    if wcs.was_augmented:
-        array_order = select_order(axtypes[2::-1])
-    else:
-        array_order = select_order(axtypes)
-    result_array = array.transpose(array_order)
-    wcs_order = np.array(select_order(axtypes))[::-1]
-
-    result_wcs = wcs_util.reindex_wcs(wcs, wcs_order)
-    result_wcs.was_augmented = wcs.was_augmented
-    result_wcs.oriented = True
-    result_extras = [arr.transpose(array_order) for arr in extra_arrs]
-    return (result_array, result_wcs) + tuple(result_extras)
+    wcs.oriented = True
+    return (array, wcs) + tuple(extra_arrs)
 
 
 def select_order(axtypes):
@@ -503,6 +491,20 @@ def _convert_slice(item, wcs, axis, _source='cube'):
 
     return slice(start, end, delta)
 
+def get_cube_from_sequence(cubesequence, item):
+    """
+    Handles CubeSequence's __getitem__ method for list of cubes.
+
+    Parameters
+    ----------
+    cubesequence: sunpycube.CubeSequence object
+        The cubesequence to get the item from
+    item: int, slice object, or tuple of these
+        The item to get from the cube
+    """
+    if isinstance(item, int):
+        return cubesequence.data[item]
+    return cubesequence.data[item[0]][item[1::]]
 
 class CubeError(Exception):
     """

@@ -51,53 +51,6 @@ class WCS(wcs.WCS):
         return newheader
 
 
-def reindex_wcs(wcs, inds):
-    # From astropy.spectral_cube.wcs_utils
-    """
-    Re-index a WCS given indices.  The number of axes may be reduced.
-
-    Parameters
-    ----------
-    wcs: sunpy.wcs.wcs.WCS
-        The WCS to be manipulated
-    inds: np.array(dtype='int')
-        The indices of the array to keep in the output.
-        e.g. swapaxes: [0,2,1,3]
-        dropaxes: [0,1,3]
-    """
-
-    if not isinstance(inds, np.ndarray):
-        raise TypeError("Indices must be an ndarray")
-
-    if inds.dtype.kind != 'i':
-        raise TypeError('Indices must be integers')
-
-    outwcs = WCS(naxis=len(inds))
-    wcs_params_to_preserve = ['cel_offset', 'dateavg', 'dateobs', 'equinox',
-                              'latpole', 'lonpole', 'mjdavg', 'mjdobs', 'name',
-                              'obsgeo', 'phi0', 'radesys', 'restfrq',
-                              'restwav', 'specsys', 'ssysobs', 'ssyssrc',
-                              'theta0', 'velangl', 'velosys', 'zsource']
-    for par in wcs_params_to_preserve:
-        setattr(outwcs.wcs, par, getattr(wcs.wcs, par))
-
-    cdelt = wcs.wcs.cdelt
-
-    try:
-        outwcs.wcs.pc = wcs.wcs.pc[inds[:, None], inds[None, :]]
-    except AttributeError:
-        outwcs.wcs.pc = np.eye(wcs.naxis)
-
-    outwcs.wcs.crpix = wcs.wcs.crpix[inds]
-    outwcs.wcs.cdelt = cdelt[inds]
-    outwcs.wcs.crval = wcs.wcs.crval[inds]
-    outwcs.wcs.cunit = [wcs.wcs.cunit[i] for i in inds]
-    outwcs.wcs.ctype = [wcs.wcs.ctype[i] for i in inds]
-    outwcs.wcs.cname = [wcs.wcs.cname[i] for i in inds]
-
-    return outwcs
-
-
 def add_celestial_axis(wcs):
     '''
     Creates a copy of the given wcs and returns it, with an extra meaningless

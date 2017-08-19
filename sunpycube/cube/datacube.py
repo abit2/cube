@@ -21,7 +21,11 @@ from astropy.units import sday  # sidereal day
 
 # Sunpy modules
 from sunpy.map import GenericMap
-from sunpy.util.metadata import MetaDict
+try:
+    from sunpy.util.metadata import MetaDict
+except ImportError:
+    from sunpy.map import MapMeta as MetaDict
+>>>>>>> origin-abit2/WCS-orientation
 from sunpy.visualization.imageanimator import ImageAnimator
 from sunpy.lightcurve import LightCurve
 from sunpycube.spectra.spectrum import Spectrum
@@ -30,7 +34,7 @@ from sunpycube.spectra.spectral_cube import SpectralCube
 from sunpycube.cube import cube_utils as cu
 from sunpycube import wcs_util as wu
 
-__all__ = ['Cube']
+__all__ = ['Cube', 'CubeSequence']
 # TODO: use uncertainties in all calculations and conversions
 
 
@@ -420,9 +424,7 @@ class Cube(astropy.nddata.NDDataArray):
             pixel = cu.convert_point(chunk, unit, self.axes_wcs, axis)
             item[axis] = pixel
             newdata = self.data[item]
-        wcs_indices = [0, 1, 2, 3]
-        wcs_indices.remove(3 - axis)
-        newwcs = wu.reindex_wcs(self.axes_wcs, np.array(wcs_indices))
+        newwcs = self.axes_wcs.dropaxis(axis)
         if axis == 2 or axis == 3:
             newwcs = wu.add_celestial_axis(newwcs)
             newwcs.was_augmented = True
@@ -441,7 +443,7 @@ class Cube(astropy.nddata.NDDataArray):
             raise cu.CubeError(2, 'Spectral axis needed to create a spectrum')
         axis = 0 if self.axes_wcs.wcs.ctype[-1] == 'WAVE' else 1
         coordaxes = [1, 2] if axis == 0 else [0, 2]  # Non-spectral axes
-        newwcs = wu.reindex_wcs(self.axes_wcs, np.arary(coordaxes))
+        newwcs = self.axes_wcs.dropaxis(axis)
         time_or_x_size = self.data.shape[coordaxes[1]]
         y_size = self.data.shape[coordaxes[0]]
         spectra = np.empty((time_or_x_size, y_size), dtype=Spectrum)
@@ -482,21 +484,32 @@ class Cube(astropy.nddata.NDDataArray):
         cunit = u.Unit(self.axes_wcs.wcs.cunit[-1 - axis])
         return np.linspace(start, stop, num=self.data.shape[axis]), cunit
 
-    def _array_is_aligned(self):
-        """
-        Returns whether the wcs system and the array are well-aligned.
-        """
-        rot_matrix = self.axes_wcs.wcs.pc
-        return np.allclose(rot_matrix, np.eye(self.axes_wcs.wcs.naxis))
-
     def __getitem__(self, item):
         if item is None or (isinstance(item, tuple) and None in item):
             raise IndexError("None indices not supported")
-        if not self._array_is_aligned():
-            raise cu.CubeError(6, "Slicing on unaligned wcs-array systems " +
-                               "not supported at the moment")
         pixels = cu.pixelize_slice(item, self.axes_wcs)
         if self.data.ndim == 3:
             return cu.getitem_3d(self, pixels)
         else:
             return cu.getitem_4d(self, pixels)
+
+class CubeSequence(object):
+    """
+    Class representing list of cubes.
+
+    Attributes
+    ----------
+    data_list : `list`
+        List of cubes.
+    """
+
+    def __init__(self, data_list):
+        if not all(isinstance(data, Cube) for data in data_list):
+            raise ValueError("data list should be of cube object")
+
+        self.data = data_list
+
+    def __getitem__(self, item):
+        if item is None or (isinstance(item, tuple) and None in item):
+            raise IndexError("None indices not supported")
+        return cu.get_cube_from_sequence(self, item)
