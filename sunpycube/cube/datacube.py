@@ -29,6 +29,7 @@ except ImportError:
     from sunpy.map import MapMeta as MetaDict
 import sunpy.visualization.wcsaxes_compat as wcsaxes_compat
 from sunpy.visualization.imageanimator import ImageAnimatorWCS
+from sunpy.visualization.imageanimator import ImageAnimator
 from sunpy.lightcurve import LightCurve
 from sunpycube.spectra.spectrum import Spectrum
 from sunpycube.spectra.spectrogram import Spectrogram
@@ -459,9 +460,7 @@ class Cube(astropy.nddata.NDDataArray):
             pixel = cu.convert_point(chunk, unit, self.axes_wcs, axis)
             item[axis] = pixel
             newdata = self.data[item]
-        wcs_indices = [0, 1, 2, 3]
-        wcs_indices.remove(3 - axis)
-        newwcs = wu.reindex_wcs(self.axes_wcs, np.array(wcs_indices))
+        newwcs = self.axes_wcs.dropaxis(axis)
         if axis == 2 or axis == 3:
             newwcs = wu.add_celestial_axis(newwcs)
             newwcs.was_augmented = True
@@ -480,7 +479,7 @@ class Cube(astropy.nddata.NDDataArray):
             raise cu.CubeError(2, 'Spectral axis needed to create a spectrum')
         axis = 0 if self.axes_wcs.wcs.ctype[-1] == 'WAVE' else 1
         coordaxes = [1, 2] if axis == 0 else [0, 2]  # Non-spectral axes
-        newwcs = wu.reindex_wcs(self.axes_wcs, np.arary(coordaxes))
+        newwcs = self.axes_wcs.dropaxis(axis)
         time_or_x_size = self.data.shape[coordaxes[1]]
         y_size = self.data.shape[coordaxes[0]]
         spectra = np.empty((time_or_x_size, y_size), dtype=Spectrum)
@@ -520,13 +519,6 @@ class Cube(astropy.nddata.NDDataArray):
         stop = start + self.data.shape[-1 - axis] * delta
         cunit = u.Unit(self.axes_wcs.wcs.cunit[axis])
         return np.linspace(start, stop, num=self.data.shape[-1 - axis]) * cunit
-
-    def _array_is_aligned(self):
-        """
-        Returns whether the wcs system and the array are well-aligned.
-        """
-        rot_matrix = self.axes_wcs.wcs.pc
-        return np.allclose(rot_matrix, np.eye(self.axes_wcs.wcs.naxis))
 
     def __getitem__(self, item):
         if item is None or (isinstance(item, tuple) and None in item):

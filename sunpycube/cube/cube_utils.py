@@ -503,6 +503,20 @@ def _convert_slice(item, wcs, axis, _source='cube'):
 
     return slice(start, end, delta)
 
+def get_cube_from_sequence(cubesequence, item):
+    """
+    Handles CubeSequence's __getitem__ method for list of cubes.
+
+    Parameters
+    ----------
+    cubesequence: sunpycube.CubeSequence object
+        The cubesequence to get the item from
+    item: int, slice object, or tuple of these
+        The item to get from the cube
+    """
+    if isinstance(item, int):
+        return cubesequence.data[item]
+    return cubesequence.data[item[0]][item[1::]]
 
 def get_cube_from_sequence(cubesequence, item):
     """
